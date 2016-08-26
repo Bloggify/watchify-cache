@@ -39,8 +39,7 @@ module.exports.getCache = function(cacheFile) {
         }
         return f
     } catch (err) {
-        console.error(err)
-        if (err.message.test(/ENOENT/gi)) {
+        if (err && err.code === 'ENOENT') {
           return {};
         } else {
           throw err
@@ -116,7 +115,7 @@ function watchify (b, opts) {
                 // a hash of their contents as well as the mtime. This is useful
                 // for files that are often overwritten with the same content
                 // but are still part of the bundle (e.g generated view partials)
-                if (stats && opts.checkShasum && opts.checkShasum.includes(file)) {
+                if (stats && opts.checkShasum && ~opts.checkShasum.indexOf(file)) {
                   cachedSourceHash = shasum(fs.readFileSync(file, 'utf8'))
                   realSourceHash = shasum(cache[file].source)
                   if (cachedSourceHash == realSourceHash) {
@@ -347,7 +346,6 @@ function watchify (b, opts) {
         if (invalid) {
             invalid = false;
             var args = 'function' === typeof(cb) ? [cb] : [];
-            b.emit('log', 'cache invalid. bundling')
             return _bundle.apply(b, args);
         } else {
             if (watch) {
