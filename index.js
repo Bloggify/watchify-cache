@@ -1,11 +1,14 @@
 var through = require('through2');
 var path = require('path');
 var chokidar = require('chokidar');
+var crypto = require('crypto');
 var xtend = require('xtend');
 var anymatch = require('anymatch');
 var mkdirp = require('mkdirp');
 var fs = require('fs');
 var writeJSONSync = require('jsonfile').writeFileSync;
+var os = require('os');
+var tmpdir = os.tmpdir();
 
 module.exports = watchify;
 module.exports.args = function() {
@@ -14,19 +17,39 @@ module.exports.args = function() {
     };
 }
 /**
- * Utility method to load a json file. Failover to an empty object.
+ * Utility method to load our json cache file. Failover to an empty object.
+ * The native browserify cache object includes the sources. However,
+ * since parsing large JSON files is extremely slow, it is much more more
+ * performant to store the source content in their individual cache files,
+ * and then reconstruct the cache object when reading.
  *
- * @param `cacheFile` {String} - full path to the json file
+ * @param cacheFile [String] - full path to the json file
  */
 module.exports.getCache = function(cacheFile) {
     try {
-        return require(cacheFile);
+        var start = Date.now()
+        var f = JSON.parse(fs.readFileSync(cacheFile, 'utf8'))
+        for (key in f) {
+          if (~['_files', '_time', '_transformDeps'].indexOf(key)) {
+            continue
+          }
+          if (f[key].source) {
+            f[key].source = fs.readFileSync(f[key].source, 'utf8');
+          }
+        }
+        return f
     } catch (err) {
-        return {};
+        console.error(err)
+        if (err.message.test(/ENOENT/gi)) {
+          return {};
+        } else {
+          throw err
+        }
     }
 };
 
 function watchify (b, opts) {
+    var wrapStart = Date.now()
     if (!opts) opts = {};
     var watch = typeof opts.watch !== 'undefined' ? opts.watch : module.exports.args().watch;
     var cacheFile = opts.cacheFile;
@@ -41,12 +64,13 @@ function watchify (b, opts) {
     var pending = false;
     var updating = false;
 
-    var wopts = {persistent: true};
     if (opts.ignoreWatch) {
         var ignored = opts.ignoreWatch !== true
             ? opts.ignoreWatch
             : '**/node_modules/**';
     }
+
+    var wopts = {persistent: true};
     if (opts.poll || typeof opts.poll === 'number') {
         wopts.usePolling = true;
         wopts.interval = opts.poll !== true
@@ -88,7 +112,19 @@ function watchify (b, opts) {
                 var stats = fs.statSync(file);
             } catch (err) {}
             if (!stats || cache._time[file] !== stats.mtime.getTime()) {
-                b.emit('log', 'Watchify cache: dep updated or removed: ' + path.basename(file));
+                // checkShasum is an array of files that we should check based
+                // a hash of their contents as well as the mtime. This is useful
+                // for files that are often overwritten with the same content
+                // but are still part of the bundle (e.g generated view partials)
+                if (stats && opts.checkShasum && opts.checkShasum.includes(file)) {
+                  cachedSourceHash = shasum(fs.readFileSync(file, 'utf8'))
+                  realSourceHash = shasum(cache[file].source)
+                  if (cachedSourceHash == realSourceHash) {
+                    cache._time[file] = stats.mtime.getTime();
+                    return;
+                  }
+                }
+                b.emit('log', 'Watchify cache: dep updated or removed: ' + file);
                 cleanEntry(cache._files[file], file);
 
                 if (transformDepsInverted[file]) {
@@ -248,12 +284,17 @@ function watchify (b, opts) {
         // wait for the disk/editor to quiet down first:
         if (!pending) setTimeout(function () {
             pending = false;
-            if (!updating) {
+            depsChanged = Object.keys(changingDeps).length > 0
+            if (!updating && depsChanged) {
                 b.emit('update', Object.keys(changingDeps));
                 changingDeps = {};
             }
         }, delay);
         pending = true;
+    }
+
+    function shasum (value) {
+      return crypto.createHash('sha1').update(value).digest('hex');
     }
 
     b.close = function () {
@@ -274,7 +315,18 @@ function watchify (b, opts) {
             if (!fs.existsSync(path.dirname(cacheFile))) {
                 mkdirp.sync(path.dirname(cacheFile));
             }
-            writeJSONSync(cacheFile, cache);
+            // Takes the source content and writes it to a file. Then
+            // replaces the source content with the filepath of that file.
+            omitSources = function(key, value) {
+              if (key === 'source' && value) {
+                hash = shasum(value)
+                var sourceCachePath = path.resolve(tmpdir, hash);
+                fs.writeFileSync(sourceCachePath, value);
+                return sourceCachePath
+              }
+              return value
+            }
+            writeJSONSync(cacheFile, cache, {replacer: omitSources});
         } catch (err) {
             b.emit('log', 'Erroring writing cache file ' + err.message);
         }
@@ -295,6 +347,7 @@ function watchify (b, opts) {
         if (invalid) {
             invalid = false;
             var args = 'function' === typeof(cb) ? [cb] : [];
+            b.emit('log', 'cache invalid. bundling')
             return _bundle.apply(b, args);
         } else {
             if (watch) {

@@ -1,7 +1,7 @@
 {
-  "name": "uber-watchify",
-  "version": "3.5.0",
-  "description": "watchify, with some bonus features. Forked@2.0.0",
+  "name": "watchify-with-cache",
+  "version": "1.0.0",
+  "description": "watchify, with an optionally persistent cache. Forked@2.0.0",
   "main": "index.js",
   "bin": "bin/cmd.js",
   "dependencies": {
@@ -28,9 +28,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/benbria/uber-watchify.git"
+    "url": "git://github.com/distracteddev/watchify-with-cache.git"
   },
-  "homepage": "https://github.com/benbria/uber-watchify",
+  "homepage": "https://github.com/distracteddev/watchify-with-cache",
   "keywords": [
     "browserify",
     "browserify-tool",
@@ -41,14 +41,13 @@
     "cache"
   ],
   "author": {
-    "name": "Benbria",
-    "email": "support@benbria.com",
-    "url": "benbria.com"
+    "name": "distracteddev"
   },
   "contributors": [
     "Calvin Wiebe <calvin.wiebe@gmail.com> (https://github.com/calvinwiebe)",
     "Shay Bergmann <shaybergmann@gmail.com> (https://github.com/kreisys)",
-    "James Halliday <mail@substack.net> (http://substack.net)"
+    "James Halliday <mail@substack.net> (http://substack.net)",
+    "Benbria <support@benbria.com> (http://benbria.com)"
   ],
   "license": "MIT"
 }
