@@ -1,11 +1,11 @@
-# uber-watchify
+# watchify-with-cache
 
 [watchify](https://github.com/substack/watchify), with some bonus features.
 
-`watchify` does some great stuff. `uber-watchify` takes it one step further. For big bundles,
+`watchify` does some great stuff. `watchify-with-cache` takes it one step further. For big bundles,
 with lots of transforms, the bundling takes a long time (with jQuery and tranforms we are talking around
 30 seconds). If you have incorporated watchify into your build system, and have it run on every start up,
-this can be costly. Watchify already uses browserify's internal cache, but it only does so in memory. `uber-watchify`
+this can be costly. Watchify already uses browserify's internal cache, but it only does so in memory. `watchify-with-cache`
 attempts to solve this problem by persisting the cache to disk.
 
 # additions
@@ -17,7 +17,7 @@ well as subsequent ones. Provide a method `w.write()`, which at the user's discr
 
 2. Add an explicit `watch` option
 
-original watchify _always_ watches. If you don't want to write a separate task, and also use uber-watchify for just
+original watchify _always_ watches. If you don't want to write a separate task, and also use watchify-with-cache for just
 regular build commands, you can turn off the watching so the process exits.
 
 3. If nothing changed, do nothing.
@@ -97,7 +97,7 @@ Whether to setup watch listeners. Defaults to `true`
 
 # example
 
-`>uber-watchify main.js --no-watch --cache-file main.browserify.cache.json -o bundle.js`
+`>watchify-with-cache main.js --no-watch --cache-file main.browserify.cache.json -o bundle.js`
 
 # license
 
