@@ -1,5 +1,5 @@
 {
-  "name": "watchify-with-cache",
+  "name": "watchify-cache",
   "version": "1.0.1",
   "description": "watchify, with an optionally persistent cache. Forked@2.0.0",
   "main": "index.js",
