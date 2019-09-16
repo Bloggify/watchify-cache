@@ -1,6 +1,6 @@
 {
   "name": "watchify-cache",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "watchify, with an optionally persistent cache. Forked@2.0.0",
   "main": "index.js",
   "bin": "bin/cmd.js",
